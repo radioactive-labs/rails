@@ -92,7 +92,7 @@ module ActiveRecord
             loaded!
           end
 
-          [association_scope.limit_value, count].compact.min
+          [scope_limit, count].compact.min
         end
 
         def update_counter(difference, reflection = reflection())
