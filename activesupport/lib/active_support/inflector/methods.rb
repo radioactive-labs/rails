@@ -35,7 +35,8 @@ module ActiveSupport
     # pluralize('ley', :es)         # => "leyes"
     # ```
     def pluralize(word, locale = :en)
-      apply_inflections(word, inflections(locale).plurals, locale)
+      inflections = inflections(locale)
+      inflections.cached_inflection(:plural, word) { apply_inflections(word, inflections.plurals, locale) }
     end
 
     # The reverse of #pluralize, returns the singular form of a word in a
@@ -54,7 +55,8 @@ module ActiveSupport
     # singularize('leyes', :es)       # => "ley"
     # ```
     def singularize(word, locale = :en)
-      apply_inflections(word, inflections(locale).singulars, locale)
+      inflections = inflections(locale)
+      inflections.cached_inflection(:singular, word) { apply_inflections(word, inflections.singulars, locale) }
     end
 
     # Converts strings to UpperCamelCase.

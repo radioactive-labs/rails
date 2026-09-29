@@ -37,6 +37,45 @@ class InflectorTest < ActiveSupport::TestCase
     assert_equal "", ActiveSupport::Inflector.pluralize("")
   end
 
+  def test_pluralize_and_singularize_are_cached_once_inflections_are_frozen
+    freeze_cache_test_inflections
+    assert_equal "comments", ActiveSupport::Inflector.pluralize("comment", :cache_test)
+    assert_equal "comment", ActiveSupport::Inflector.singularize("comments", :cache_test)
+
+    ActiveSupport::Inflector.stub(:apply_inflections, ->(*) { flunk "inflection was not cached" }) do
+      assert_equal "comments", ActiveSupport::Inflector.pluralize("comment", :cache_test)
+      assert_equal "comment", ActiveSupport::Inflector.singularize("comments", :cache_test)
+    end
+  end
+
+  def test_cached_inflections_return_a_new_string_each_time
+    freeze_cache_test_inflections
+    plural = ActiveSupport::Inflector.pluralize("comment", :cache_test)
+    plural << "!"
+
+    assert_equal "comments", ActiveSupport::Inflector.pluralize("comment", :cache_test)
+    assert_not_predicate ActiveSupport::Inflector.pluralize("comment", :cache_test), :frozen?
+  end
+
+  def test_inflections_are_not_cached_before_they_are_frozen
+    assert_equal "comments", ActiveSupport::Inflector.pluralize("comment")
+
+    ActiveSupport::Inflector.inflections.plural(/ment$/i, "mentz")
+    assert_equal "commentz", ActiveSupport::Inflector.pluralize("comment")
+  end
+
+  def test_cached_inflections_keep_the_class_and_encoding_of_the_word
+    safe_word = ActiveSupport::SafeBuffer.new("comment")
+    binary_word = "comment".b
+    freeze_cache_test_inflections
+    ActiveSupport::Inflector.pluralize("comment", :cache_test)
+
+    2.times do
+      assert_instance_of ActiveSupport::SafeBuffer, ActiveSupport::Inflector.pluralize(safe_word, :cache_test)
+      assert_equal Encoding::BINARY, ActiveSupport::Inflector.pluralize(binary_word, :cache_test).encoding
+    end
+  end
+
   def test_pluralize_with_fallback
     I18n.stub(:default_locale, :"en-GB") do
       assert_equal "days", ActiveSupport::Inflector.pluralize("day")
@@ -688,4 +727,13 @@ class InflectorTest < ActiveSupport::TestCase
     assert_predicate input, :frozen?
     assert_not_predicate ActiveSupport::Inflector.pluralize(input), :frozen?
   end
+
+  private
+    def freeze_cache_test_inflections
+      ActiveSupport::Inflector.inflections(:cache_test) do |inflect|
+        inflect.plural(/$/, "s")
+        inflect.singular(/s$/i, "")
+        inflect.freeze
+      end
+    end
 end

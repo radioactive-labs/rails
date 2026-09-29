@@ -129,7 +129,29 @@ module ActiveSupport
         @uncountables.freeze
         @acronyms.freeze
 
+        # Frozen rules can't change, so inflected words can be cached.
+        @plural_cache = Concurrent::Map.new
+        @singular_cache = Concurrent::Map.new
+
         super
+      end
+
+      # Returns the inflection of `word` computed by the block, cached once
+      # these rules are frozen, which Rails does after the application boots.
+      # Only plain UTF-8 strings are cached, since the result keeps the class
+      # and encoding of the word it was computed from.
+      def cached_inflection(kind, word) # :nodoc:
+        return yield unless frozen? && word.instance_of?(String) && word.encoding == Encoding::UTF_8
+
+        cache = kind == :plural ? @plural_cache : @singular_cache
+        if cached = cache[word]
+          cached.dup
+        else
+          cache.clear if cache.size >= 1000
+          inflected = yield
+          cache[word.frozen? ? word : word.dup.freeze] = inflected.dup.freeze
+          inflected
+        end
       end
 
       # Private, for the test suite.
@@ -138,6 +160,7 @@ module ActiveSupport
           instance_variable_set("@#{scope}", orig.public_send(scope).dup)
         end
         define_acronym_regex_patterns
+        @plural_cache = @singular_cache = nil
       end
 
       # Specifies a new acronym. An acronym must be specified as it will appear
