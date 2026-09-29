@@ -1530,6 +1530,18 @@ class HasManyAssociationsTest < ActiveRecord::TestCase
     end
   end
 
+  def test_calling_size_with_counter_cache_does_not_build_the_association_scope
+    post = posts(:welcome)
+
+    ActiveRecord::Associations::AssociationScope.stub(:scope, ->(*) { flunk "association scope was built" }) do
+      assert_no_queries do
+        assert_equal 2, post.comments.size
+        assert_not_predicate post.comments, :empty?
+        assert_predicate post.comments, :any?
+      end
+    end
+  end
+
   def test_custom_named_counter_cache
     topic = topics(:first)
 

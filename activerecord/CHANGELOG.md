@@ -1,3 +1,13 @@
+*   Avoid building the association scope for every record in `size`, `empty?`
+    and `any?` on unscoped `has_many` associations.
+
+    When the association has no scope, its relation only holds the owner's
+    foreign key constraints, so it can't be grouped, distinct or limited. These
+    methods now skip building that relation just to check, which saves most of
+    the work of `post.comments.size` when it's answered from a counter cache.
+
+    *Stefan Froelich*
+
 *   Treat `false` as disabled for `idle_timeout`, `reaping_frequency` and `max_age`
     in `database.yml`.
 

@@ -204,9 +204,9 @@ module ActiveRecord
           target.size
         elsif @association_ids
           @association_ids.size
-        elsif !association_scope.group_values.empty?
+        elsif grouped_scope?
           load_target.size
-        elsif !association_scope.distinct_value && !target.empty?
+        elsif !distinct_scope? && !target.empty?
           unsaved_records = target.select(&:new_record?)
           unsaved_records.size + count_records
         else
@@ -271,7 +271,7 @@ module ActiveRecord
       end
 
       def add_to_target(record, skip_callbacks: false, replace: false, &block)
-        replace_on_target(record, skip_callbacks, replace: replace || association_scope.distinct_value, &block)
+        replace_on_target(record, skip_callbacks, replace: replace || distinct_scope?, &block)
       end
 
       def target=(record)
@@ -311,6 +311,25 @@ module ActiveRecord
       end
 
       private
+        # Without a reflection scope, the association scope only holds the
+        # owner's foreign key constraints, so owner-independent values like
+        # +distinct+ and +limit+ are known without building it per record.
+        def scoped_reflection?
+          reflection.scope || reflection.through_reflection?
+        end
+
+        def grouped_scope?
+          scoped_reflection? && !association_scope.group_values.empty?
+        end
+
+        def distinct_scope?
+          scoped_reflection? && association_scope.distinct_value
+        end
+
+        def scope_limit
+          association_scope.limit_value if scoped_reflection?
+        end
+
         def transaction(&block)
           reflection.klass.transaction(&block)
         end
