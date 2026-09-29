@@ -162,6 +162,17 @@ class DateHelperTest < ActionView::TestCase
     )
   end
 
+  def test_distance_in_words_does_not_convert_times_with_zone_to_time
+    from = Time.utc(2004, 6, 6, 21, 45, 0).in_time_zone("Alaska")
+    to = (from + 3.years + 6.months).in_time_zone("Hawaii")
+
+    from.stub(:to_time, -> { flunk "to_time was called" }) do
+      to.stub(:to_time, -> { flunk "to_time was called" }) do
+        assert_equal "over 3 years", distance_of_time_in_words(from, to)
+      end
+    end
+  end
+
   def test_distance_in_words_with_dates
     start_date = Date.new 1975, 1, 31
     end_date = Date.new 1977, 1, 31

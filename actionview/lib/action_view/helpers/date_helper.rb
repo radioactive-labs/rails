@@ -724,6 +724,10 @@ module ActionView
         def normalize_distance_of_time_argument_to_time(value)
           if value.is_a?(Numeric)
             Time.at(value)
+          elsif value.is_a?(Time)
+            # Includes ActiveSupport::TimeWithZone, which compares and subtracts
+            # through its UTC time, so converting it with +to_time+ is wasted work.
+            value
           elsif value.respond_to?(:to_time)
             value.to_time
           else
