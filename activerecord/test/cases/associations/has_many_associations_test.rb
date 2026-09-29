@@ -1536,6 +1536,8 @@ class HasManyAssociationsTest < ActiveRecord::TestCase
     ActiveRecord::Associations::AssociationScope.stub(:scope, ->(*) { flunk "association scope was built" }) do
       assert_no_queries do
         assert_equal 2, post.comments.size
+        assert_not_predicate post.comments, :empty?
+        assert_predicate post.comments, :any?
       end
     end
   end
